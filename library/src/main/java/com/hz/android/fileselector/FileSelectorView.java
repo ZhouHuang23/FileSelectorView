@@ -35,11 +35,11 @@ public class FileSelectorView extends ListView {
     private OnFileSelectedListener fileSelectedListener;
 
     //字体颜色
-    private int textColor = -1;
+    private int textColor = 0x88000000;
     //字体大小
-    private float textSize = -1.0f;
+    private float textSize = 16;
     //图片大小
-    private int iconSize = -1;
+    private int iconSize = 100;
 
 
     // 自定义文件图片
@@ -167,15 +167,9 @@ public class FileSelectorView extends ListView {
     private void refreshData(ViewHolder viewHolder, int position) {
         FileItem fileItem = fileItemList.get(position);// 当前位置文件
 
-        if (textColor != -1) {
-            viewHolder.filePath.setTextColor(textColor);
-        }
-        if (textSize != -1.0) {
-            viewHolder.filePath.setTextSize(textSize);
-        }
-        if (iconSize != -1) {
-            viewHolder.fileIcon.setLayoutParams(new LinearLayout.LayoutParams(iconSize,iconSize));
-        }
+        viewHolder.filePath.setTextColor(textColor);
+        viewHolder.filePath.setTextSize(textSize);
+        viewHolder.fileIcon.setLayoutParams(new LinearLayout.LayoutParams(iconSize, iconSize));
 
         if (fileIconCreator == null) {
             if (fileItem.isBackFileItem()) {
@@ -246,7 +240,10 @@ public class FileSelectorView extends ListView {
      * @param textColor
      */
     public void setTextColor(int textColor) {
-        this.textColor = textColor;
+        if (textColor >= 0) {
+            this.textColor = textColor;
+            fileAdapter.notifyDataSetChanged();
+        }
     }
 
     /**
@@ -255,7 +252,10 @@ public class FileSelectorView extends ListView {
      * @param textSize
      */
     public void setTextSize(float textSize) {
-        this.textSize = textSize;
+        if (textSize > 0) {
+            this.textSize = textSize;
+            fileAdapter.notifyDataSetChanged();
+        }
     }
 
     /**
@@ -264,6 +264,9 @@ public class FileSelectorView extends ListView {
      * @param iconSize
      */
     public void setIconSize(int iconSize) {
-        this.iconSize = iconSize;
+        if (iconSize > 0) {
+            this.iconSize = iconSize;
+            fileAdapter.notifyDataSetChanged();
+        }
     }
 }

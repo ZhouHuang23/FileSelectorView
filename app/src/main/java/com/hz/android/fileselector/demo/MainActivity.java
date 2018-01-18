@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import com.hz.android.fileselector.FileIconCreator;
@@ -15,12 +16,13 @@ import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
+    FileSelectorView fileSelectorView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FileSelectorView fileSelectorView = (FileSelectorView) findViewById(R.id.file_selector_view);
+         fileSelectorView = (FileSelectorView) findViewById(R.id.file_selector_view);
 
         //test
         //切换目录
@@ -38,9 +40,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        fileSelectorView.setTextSize(30);//设置文字大小
-        fileSelectorView.setTextColor(Color.GREEN); //设置文字颜色
-        fileSelectorView.setIconSize(200); //设置图标大小也就是设置放置图标的imageView的大小
+
 
         //设置选择文件的监听
         fileSelectorView.setFileSelectedListener(new FileSelectorView.OnFileSelectedListener() {
@@ -49,5 +49,11 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "" + selectedFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    public void reset(View view){
+        fileSelectorView.setTextSize(30);//设置文字大小
+        fileSelectorView.setTextColor(Color.GREEN); //设置文字颜色
+        fileSelectorView.setIconSize(200); //设置图标大小也就是设置放置图标的imageView的大小
     }
 }
