@@ -31,3 +31,6 @@ dependencies {
     compile 'com.forward.androids:androids:1.1.7'
 
 }
+if (isForUpload2Maven()) {
+    apply from: "bintrayUpload.gradle"
+}
