@@ -2,6 +2,7 @@ package com.hz.android.fileselector;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.util.AttributeSet;
 import android.view.View;
@@ -45,6 +46,8 @@ public class FileSelectorView extends ListView {
     // 自定义文件图片
     private FileIconCreator fileIconCreator;
 
+    private FileIconCreator defaultFileIconCreator;
+
     public FileSelectorView(Context context) {
         this(context, null, 0);
     }
@@ -81,6 +84,22 @@ public class FileSelectorView extends ListView {
                 }
             }
         });
+
+        // 默认的图标获取器
+        defaultFileIconCreator = new FileIconCreator() {
+            @Override
+            public Drawable getIcon(File file) {
+                if (file == null) {
+                    return getResources().getDrawable(R.drawable.ic_folder_back);
+                } else if (file.isDirectory()) {
+                    return getResources().getDrawable(R.drawable.folder);
+                } else {
+                    return getResources().getDrawable(R.drawable.file_common);
+                }
+            }
+        };
+
+        fileIconCreator = defaultFileIconCreator; // 把默认的图标获取器作为当前使用的获取器
     }
 
     // 根据传入的目录显示其包含的文件
@@ -166,31 +185,15 @@ public class FileSelectorView extends ListView {
 
     private void refreshData(ViewHolder viewHolder, int position) {
         FileItem fileItem = fileItemList.get(position);// 当前位置文件
-
         viewHolder.filePath.setTextColor(textColor);
         viewHolder.filePath.setTextSize(textSize);
         viewHolder.fileIcon.setLayoutParams(new LinearLayout.LayoutParams(iconSize, iconSize));
-
-        if (fileIconCreator == null) {
-            if (fileItem.isBackFileItem()) {
-                viewHolder.fileIcon.setImageResource(R.drawable.ic_folder_back);
-                viewHolder.filePath.setText("...");
-            } else if (fileItem.getFile().isDirectory()) {
-                viewHolder.fileIcon.setImageResource(R.drawable.folder);
-                viewHolder.filePath.setText(fileItem.getFileName());
-            } else {
-                viewHolder.fileIcon.setImageResource(R.drawable.file_common);
-                viewHolder.filePath.setText(fileItem.getFileName());
-            }
+        viewHolder.fileIcon.setImageDrawable(fileIconCreator.getIcon(fileItem.getFile())); //file==null 可以设置返回图标
+        if (fileItem.isBackFileItem()) {
+            viewHolder.filePath.setText("...");
         } else {
-            viewHolder.fileIcon.setImageDrawable(fileIconCreator.getIcon(fileItem.getFile())); //file==null 可以设置返回图标
-            if (fileItem.isBackFileItem()) {
-                viewHolder.filePath.setText("...");
-            } else {
-                viewHolder.filePath.setText(fileItem.getFileName());
-            }
+            viewHolder.filePath.setText(fileItem.getFileName());
         }
-
     }
 
     //定义ViewHolder 缓存view对象
@@ -200,10 +203,6 @@ public class FileSelectorView extends ListView {
 
     }
 
-    //定义接口 点击的是文件则通知外面
-    public interface OnFileSelectedListener {
-        void onSelected(File selectedFile);
-    }
 
     //对外接口 设置选择文件监听器
     public void setFileSelectedListener(OnFileSelectedListener fileSelectedListener) {
@@ -232,6 +231,9 @@ public class FileSelectorView extends ListView {
 
     public void setFileIconFactory(FileIconCreator fileIconCreator) {
         this.fileIconCreator = fileIconCreator;
+        if (this.fileIconCreator == null) { // 如果外部传入的为null， 则使用默认获取器，确保fileIconCreator不为空
+            this.fileIconCreator = defaultFileIconCreator;
+        }
     }
 
     /**
@@ -268,5 +270,30 @@ public class FileSelectorView extends ListView {
             this.iconSize = iconSize;
             fileAdapter.notifyDataSetChanged();
         }
+    }
+
+    /**
+     * 定义点击文件则通知外面的接口
+     */
+    public interface OnFileSelectedListener {
+        /**
+         * 回调选中的文件
+         *
+         * @param selectedFile 选中的文件
+         */
+        void onSelected(File selectedFile);
+    }
+
+    /**
+     * 定义文件图标获取器的接口
+     */
+    public interface FileIconCreator {
+
+        /**
+         * 回调获取文件图标
+         *
+         * @param file 文件的路径，当file == null时表示返回上一级的选项，而不是一个真实文件
+         */
+        Drawable getIcon(File file);
     }
 }

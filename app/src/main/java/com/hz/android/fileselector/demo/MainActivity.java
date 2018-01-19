@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 
-import com.hz.android.fileselector.FileIconCreator;
 import com.hz.android.fileselector.FileSelectorView;
 
 import java.io.File;
@@ -30,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         //设置文件过滤
         fileSelectorView.setFileExtensionForFileFilter(Arrays.asList("shp", "txt"));
         //自定义文件图标
-        fileSelectorView.setFileIconFactory(new FileIconCreator() {
+        fileSelectorView.setFileIconFactory(new FileSelectorView.FileIconCreator() {
             public Drawable getIcon(File file) {
                 if (file == null) {
                     return getResources().getDrawable(R.drawable.rotating);
