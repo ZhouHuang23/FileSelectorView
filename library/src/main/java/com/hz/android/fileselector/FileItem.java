@@ -1,8 +1,5 @@
 package com.hz.android.fileselector;
 
-import android.widget.ImageView;
-import android.widget.TextView;
-
 import java.io.File;
 
 /**

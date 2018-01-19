@@ -1,7 +1,6 @@
 package com.hz.android.fileselector;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.util.AttributeSet;
@@ -17,6 +16,8 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -30,8 +31,6 @@ public class FileSelectorView extends ListView {
     private FileAdapter fileAdapter;
     //标记文件 用于返回上一层
     private File markFile;
-    // 过滤列表
-    private List<String> fileFilterList = new ArrayList<>();
     //File选择监听器
     private OnFileSelectedListener fileSelectedListener;
 
@@ -42,6 +41,10 @@ public class FileSelectorView extends ListView {
     //图片大小
     private int iconSize = 100;
 
+    private FileFilter fileFilter; // 文件过滤器
+
+    private Comparator<FileItem> comparator;//文件比较器
+    private Comparator<FileItem> defaultComparator;//默认文件比较器
 
     // 自定义文件图片
     private FileIconCreator fileIconCreator;
@@ -62,10 +65,29 @@ public class FileSelectorView extends ListView {
         fileAdapter = new FileAdapter();
         this.setAdapter(fileAdapter);
 
-        //获取外部存储目录即 SDCard （可以交给外部设置 ）
-        File rootDirFile = Environment.getExternalStorageDirectory();
 
-        updateCurrentDirectory(rootDirFile);
+        // 默认的图标获取器
+        defaultFileIconCreator = new FileIconCreator() {
+            @Override
+            public Drawable getIcon(File file) {
+                if (file == null) {
+                    return getResources().getDrawable(R.drawable.ic_folder_back);
+                } else if (file.isDirectory()) {
+                    return getResources().getDrawable(R.drawable.folder);
+                } else {
+                    return getResources().getDrawable(R.drawable.file_common);
+                }
+            }
+        };
+
+        fileIconCreator = defaultFileIconCreator; // 把默认的图标获取器作为当前使用的获取器
+        defaultComparator = new FolderFirstComparator();
+        comparator = defaultComparator; //未设置比较器级使用默认比较器
+
+        //获取外部存储目录即 SDCard （可以交给外部设置 ）
+        File storageDirectory = Environment.getExternalStorageDirectory();
+
+        updateCurrentDirectory(storageDirectory);
 
         // 监听Item的点击
         this.setOnItemClickListener(new OnItemClickListener() {
@@ -85,50 +107,31 @@ public class FileSelectorView extends ListView {
             }
         });
 
-        // 默认的图标获取器
-        defaultFileIconCreator = new FileIconCreator() {
-            @Override
-            public Drawable getIcon(File file) {
-                if (file == null) {
-                    return getResources().getDrawable(R.drawable.ic_folder_back);
-                } else if (file.isDirectory()) {
-                    return getResources().getDrawable(R.drawable.folder);
-                } else {
-                    return getResources().getDrawable(R.drawable.file_common);
-                }
-            }
-        };
 
-        fileIconCreator = defaultFileIconCreator; // 把默认的图标获取器作为当前使用的获取器
     }
 
-    // 根据传入的目录显示其包含的文件
+    /**
+     * 更新当前目录
+     */
+    public void updateCurrentDirectory() {
+        updateCurrentDirectory(markFile);
+    }
+
+    /**
+     * 更新传入的目录
+     *
+     * @param currentDirectory
+     */
     public void updateCurrentDirectory(File currentDirectory) {
         markFile = currentDirectory;
         //清除原来的数据
         fileItemList.clear();
 
         //设置过滤
-        File[] files = currentDirectory.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                if (!fileFilterList.isEmpty()) { //list中有内容 说明需要按照文件类型进行过滤
-                    if (pathname.isDirectory()) {
-                        return true;
-                    }
-                    for (String fileFilterString : fileFilterList) {
-                        if (pathname.getName().toLowerCase().endsWith(fileFilterString)) {
-                            return true;
-                        }
-                    }
-                } else {
-                    return true;
-                }
-                return false;
-            }
-        });
+        File[] files = currentDirectory.listFiles(fileFilter);
 
-        //1 判断当前目录是否为更目录
+
+        //1 判断当前目录是否为根目录
         if (!currentDirectory.getAbsolutePath().equals(Environment.getExternalStorageDirectory().getAbsolutePath())) {
             fileItemList.add(new FileItem(null, true));
         }
@@ -136,9 +139,16 @@ public class FileSelectorView extends ListView {
         for (File file : files) {
             fileItemList.add(new FileItem(file));
         }
+        // 3 对文件进行排序
+        Collections.sort(fileItemList, comparator);
 
-        //通知数据适配器
+        // 4 通知数据适配器
         fileAdapter.notifyDataSetChanged();
+
+        //通知路径改变
+        if (fileSelectedListener != null) {
+            fileSelectedListener.onFilePathChanged(currentDirectory);
+        }
 
     }
 
@@ -203,17 +213,32 @@ public class FileSelectorView extends ListView {
 
     }
 
+    /**
+     * 返回标记的file（当前父目录）
+     *
+     * @return
+     */
+    public File getMarkFile() {
+        return markFile;
+    }
 
-    //对外接口 设置选择文件监听器
+    /**
+     * 设置选择文件监听器
+     *
+     * @param fileSelectedListener
+     */
     public void setFileSelectedListener(OnFileSelectedListener fileSelectedListener) {
         this.fileSelectedListener = fileSelectedListener;
     }
 
-    //对外接口 提供文件过滤
-    public void setFileExtensionForFileFilter(List<String> fileFilterList) {
-        //this.fileFilterList.clear();
-        this.fileFilterList = fileFilterList;
-        updateCurrentDirectory(markFile);
+    /**
+     * 文件过滤器 ，提供了常见的过滤设置亦可自定义。
+     *
+     * @param fileFilter
+     */
+    public void setFileFilter(FileFilter fileFilter) {
+        this.fileFilter = fileFilter;
+        updateCurrentDirectory();
     }
 
     /**
@@ -229,6 +254,11 @@ public class FileSelectorView extends ListView {
         }
     }
 
+    /**
+     * 设置文件图标
+     *
+     * @param fileIconCreator
+     */
     public void setFileIconFactory(FileIconCreator fileIconCreator) {
         this.fileIconCreator = fileIconCreator;
         if (this.fileIconCreator == null) { // 如果外部传入的为null， 则使用默认获取器，确保fileIconCreator不为空
@@ -282,6 +312,13 @@ public class FileSelectorView extends ListView {
          * @param selectedFile 选中的文件
          */
         void onSelected(File selectedFile);
+
+        /**
+         * 回调选中的文件
+         *
+         * @param file 选中的文件（夹）
+         */
+        void onFilePathChanged(File file);
     }
 
     /**
@@ -295,5 +332,83 @@ public class FileSelectorView extends ListView {
          * @param file 文件的路径，当file == null时表示返回上一级的选项，而不是一个真实文件
          */
         Drawable getIcon(File file);
+    }
+
+    /**
+     * 设置文件排序器
+     *
+     * @param comparator
+     */
+    public void setFileSortComparator(Comparator comparator) {
+        this.comparator = comparator;
+        if (comparator == null) {
+            this.comparator = defaultComparator;
+        }
+        updateCurrentDirectory();
+        fileAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * 升序排序比较器
+     */
+    public static class FileAscSortComparator implements Comparator<FileItem> {
+
+        @Override
+        public int compare(FileItem o1, FileItem o2) {
+            if (o1.isBackFileItem() || o2.isBackFileItem()) {
+                return 1;
+            } else {
+                return o1.getFile().getName().compareTo(o2.getFile().getName());
+            }
+        }
+    }
+
+    /**
+     * 降序排序比较器
+     */
+    public static class FileDesSortComparator implements Comparator<FileItem> {
+
+        @Override
+        public int compare(FileItem o1, FileItem o2) {
+            if (o1.isBackFileItem() || o2.isBackFileItem()) {
+                return 1;
+            } else {
+                return o2.getFile().getName().compareTo(o1.getFile().getName());
+            }
+        }
+    }
+
+    /**
+     * 文件夹在前文件在后的排序比较器
+     */
+    public static class FolderFirstComparator implements Comparator<FileItem> {
+
+        @Override
+        public int compare(FileItem o1, FileItem o2) {
+
+            if (o1.getFile() == null) {
+                return -1;
+            }
+
+            if (o2.getFile() == null) {
+                return 1;
+            }
+
+            if (o1.getFile().isDirectory()) {
+                if (o2.getFile().isDirectory()) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            }
+            if (o1.getFile().isFile()) {
+                if (o2.getFile().isDirectory()) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+            return 0;
+        }
     }
 }
