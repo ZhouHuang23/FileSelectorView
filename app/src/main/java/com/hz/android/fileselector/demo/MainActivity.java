@@ -1,6 +1,7 @@
 package com.hz.android.fileselector.demo;
 
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -8,6 +9,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.hz.android.fileselector.DefaultFileIconCreator;
 import com.hz.android.fileselector.FileSelectorView;
 
 import java.io.File;
@@ -46,6 +48,19 @@ public class MainActivity extends AppCompatActivity {
             }
         });*/
 
+       //作为使用者，你模拟使用默认获取器试试
+
+        fileSelectorView.setFileIconCreator(new FileSelectorView.FileIconCreator() {
+            FileSelectorView.FileIconCreator defaultIcon = new DefaultFileIconCreator(getApplicationContext());
+            @Override
+            public Drawable getIcon(File file) {
+                if(file ==null){
+                    return getResources().getDrawable(R.drawable.layers3);
+                }else {
+                   return  defaultIcon.getIcon(file); // 把逻辑交给默认的获取器对象处理  方法只是封装了代码呀 最终还是执行getIcon这个方法的 你手动调用就行了呀 嗯嗯
+                }
+            }
+        });
         //设置选择文件的监听
         fileSelectorView.setOnFileSelectedListener(new FileSelectorView.OnFileSelectedListener() {
             @Override
