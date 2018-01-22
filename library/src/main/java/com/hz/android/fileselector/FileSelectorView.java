@@ -1,6 +1,12 @@
 package com.hz.android.fileselector;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.util.AttributeSet;
@@ -18,9 +24,12 @@ import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
+ * 自定义文件选择ListView
  * Created by Administrator on 2018/1/17.
  */
 
@@ -51,6 +60,9 @@ public class FileSelectorView extends ListView {
 
     private FileIconCreator defaultFileIconCreator;
 
+    //缓存绘制的文件图标
+    private Map<String, BitmapDrawable> savedFileIconMap = new HashMap<>();
+
     public FileSelectorView(Context context) {
         this(context, null, 0);
     }
@@ -74,8 +86,40 @@ public class FileSelectorView extends ListView {
                     return getResources().getDrawable(R.drawable.ic_folder_back);
                 } else if (file.isDirectory()) {
                     return getResources().getDrawable(R.drawable.folder);
-                } else {
-                    return getResources().getDrawable(R.drawable.file_common);
+                } else { // 根据文件后缀生成对应的文件图标
+                    String fileExtensionString = file.getName().substring(file.getName().lastIndexOf(".") + 1).toUpperCase();
+                    BitmapDrawable savedFileIcon = savedFileIconMap.get(fileExtensionString);
+                    BitmapDrawable commonFileIcon = (BitmapDrawable) getResources().getDrawable(R.drawable.file_common); // 图片实际的对象类型为BitmapDrawable
+
+                    if (fileExtensionString.length() > 5) {
+                        return commonFileIcon;
+                    } else {
+                        if (savedFileIcon != null) {
+                            return savedFileIcon;
+                        } else {
+                            Bitmap icon = commonFileIcon.getBitmap().copy(Bitmap.Config.ARGB_8888, true); //拷贝图片副本 使之可以修改
+                            Canvas canvas = new Canvas(icon); // 把图片作为画布
+                            //在画布上绘制文字，相当于在图片上绘制
+                            Paint paint = new Paint(Paint.FAKE_BOLD_TEXT_FLAG | Paint.ANTI_ALIAS_FLAG); //设置粗体反锯齿
+                            paint.setTextSize(35);
+                            paint.setColor(Color.WHITE);
+
+                            //获取文字矩形
+                            Rect fileExtensionRect = new Rect();
+                            paint.getTextBounds(fileExtensionString, 0, fileExtensionString.length(), fileExtensionRect);
+
+                            int centerX = icon.getWidth() / 2 - (fileExtensionRect.right - fileExtensionRect.left) / 2;
+                            int centerY = icon.getHeight() / 2 + (fileExtensionRect.bottom - fileExtensionRect.top) / 2;
+                            int offsetX = -10;
+                            int offsetY = 20;
+
+                            canvas.drawText(fileExtensionString, centerX + offsetX, centerY + offsetY, paint);//在画布正确位置绘制文字
+
+                            savedFileIcon = new BitmapDrawable(icon);// 封装成Drawable对象
+                            savedFileIconMap.put(fileExtensionString, savedFileIcon);
+                            return savedFileIcon;
+                        }
+                    }
                 }
             }
         };
@@ -84,7 +128,7 @@ public class FileSelectorView extends ListView {
         defaultComparator = new FolderFirstComparator();
         comparator = defaultComparator; //未设置比较器级使用默认比较器
 
-        //获取外部存储目录即 SDCard （可以交给外部设置 ）
+        //获取外部存储目录即 SDCard
         File storageDirectory = Environment.getExternalStorageDirectory();
 
         updateCurrentDirectory(storageDirectory);
@@ -106,7 +150,6 @@ public class FileSelectorView extends ListView {
                 }
             }
         });
-
 
     }
 
@@ -130,7 +173,6 @@ public class FileSelectorView extends ListView {
         //设置过滤
         File[] files = currentDirectory.listFiles(fileFilter);
 
-
         //1 判断当前目录是否为根目录
         if (!currentDirectory.getAbsolutePath().equals(Environment.getExternalStorageDirectory().getAbsolutePath())) {
             fileItemList.add(new FileItem(null, true));
@@ -151,7 +193,6 @@ public class FileSelectorView extends ListView {
         }
 
     }
-
 
     private class FileAdapter extends BaseAdapter {
 
@@ -192,7 +233,6 @@ public class FileSelectorView extends ListView {
         }
     }
 
-
     private void refreshData(ViewHolder viewHolder, int position) {
         FileItem fileItem = fileItemList.get(position);// 当前位置文件
         viewHolder.filePath.setTextColor(textColor);
@@ -213,22 +253,24 @@ public class FileSelectorView extends ListView {
 
     }
 
-    /**
-     * 返回标记的file（当前父目录）
-     *
-     * @return
-     */
-    public File getMarkFile() {
-        return markFile;
-    }
+    /*=======API========*/
 
     /**
      * 设置选择文件监听器
      *
      * @param fileSelectedListener
      */
-    public void setFileSelectedListener(OnFileSelectedListener fileSelectedListener) {
+    public void setOnFileSelectedListener(OnFileSelectedListener fileSelectedListener) {
         this.fileSelectedListener = fileSelectedListener;
+    }
+
+    /**
+     * 获取选择文件监听器
+     *
+     * @return
+     */
+    public OnFileSelectedListener getFileSelectedListener() {
+        return fileSelectedListener;
     }
 
     /**
@@ -239,6 +281,15 @@ public class FileSelectorView extends ListView {
     public void setFileFilter(FileFilter fileFilter) {
         this.fileFilter = fileFilter;
         updateCurrentDirectory();
+    }
+
+    /**
+     * 获取文件过滤器
+     *
+     * @return
+     */
+    public FileFilter getFileFilter() {
+        return fileFilter;
     }
 
     /**
@@ -255,15 +306,33 @@ public class FileSelectorView extends ListView {
     }
 
     /**
-     * 设置文件图标
+     * 返回标记的file（当前父目录）
+     *
+     * @return
+     */
+    public File getCurrentDirectory() {
+        return markFile;
+    }
+
+    /**
+     * 设置文件图标创建器
      *
      * @param fileIconCreator
      */
-    public void setFileIconFactory(FileIconCreator fileIconCreator) {
+    public void setFileIconCreator(FileIconCreator fileIconCreator) {
         this.fileIconCreator = fileIconCreator;
         if (this.fileIconCreator == null) { // 如果外部传入的为null， 则使用默认获取器，确保fileIconCreator不为空
             this.fileIconCreator = defaultFileIconCreator;
         }
+    }
+
+    /**
+     * 获取文件图标创造器
+     *
+     * @return
+     */
+    public FileIconCreator getFileIconCreator() {
+        return fileIconCreator;
     }
 
     /**
@@ -272,10 +341,17 @@ public class FileSelectorView extends ListView {
      * @param textColor
      */
     public void setTextColor(int textColor) {
-        if (textColor >= 0) {
-            this.textColor = textColor;
-            fileAdapter.notifyDataSetChanged();
-        }
+        this.textColor = textColor;
+        fileAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * 获取文件名显示的颜色
+     *
+     * @return
+     */
+    public int getTextColor() {
+        return textColor;
     }
 
     /**
@@ -290,8 +366,12 @@ public class FileSelectorView extends ListView {
         }
     }
 
+    public float getTextSize() {
+        return textSize;
+    }
+
     /**
-     * 设置文件名显示的大小
+     * 设置文件图标的大小
      *
      * @param iconSize
      */
@@ -300,6 +380,15 @@ public class FileSelectorView extends ListView {
             this.iconSize = iconSize;
             fileAdapter.notifyDataSetChanged();
         }
+    }
+
+    /**
+     * 获取文件图标的大小
+     *
+     * @return
+     */
+    public int getIconSize() {
+        return iconSize;
     }
 
     /**
@@ -339,7 +428,7 @@ public class FileSelectorView extends ListView {
      *
      * @param comparator
      */
-    public void setFileSortComparator(Comparator comparator) {
+    public void setFileSortComparator(Comparator<FileItem> comparator) {
         this.comparator = comparator;
         if (comparator == null) {
             this.comparator = defaultComparator;
@@ -396,16 +485,17 @@ public class FileSelectorView extends ListView {
 
             if (o1.getFile().isDirectory()) {
                 if (o2.getFile().isDirectory()) {
-                    return 0;
+                    return o1.getFile().getName().compareTo(o2.getFile().getName());
                 } else {
                     return -1;
                 }
             }
+
             if (o1.getFile().isFile()) {
                 if (o2.getFile().isDirectory()) {
                     return 1;
                 } else {
-                    return 0;
+                    return o1.getFile().getName().compareTo(o2.getFile().getName());
                 }
             }
             return 0;

@@ -3,6 +3,7 @@ package com.hz.android.fileselector;
 import java.io.File;
 
 /**
+ * ListView的Item
  * Created by Administrator on 2018/1/17.
  */
 

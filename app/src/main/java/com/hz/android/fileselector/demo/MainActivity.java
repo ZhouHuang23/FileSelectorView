@@ -8,11 +8,9 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.hz.android.fileselector.FileExtendFilter;
 import com.hz.android.fileselector.FileSelectorView;
 
 import java.io.File;
-import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
         //切换目录
         fileSelectorView.setCurrentDirectory(curDir);
         //设置文件过滤
-        fileSelectorView.setFileFilter(new FileExtendFilter(Arrays.asList("shp", "txt"))); // 设置过滤规则
+        //fileSelectorView.setFileFilter(new FileExtendFilter(Arrays.asList("shp", "kml"))); // 设置过滤规则
         //fileSelectorView.setFileFilter(new FileContainsFieldsFilter(Arrays.asList("shp")));
 
        /* //自定义文件图标
@@ -49,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         });*/
 
         //设置选择文件的监听
-        fileSelectorView.setFileSelectedListener(new FileSelectorView.OnFileSelectedListener() {
+        fileSelectorView.setOnFileSelectedListener(new FileSelectorView.OnFileSelectedListener() {
             @Override
             public void onSelected(File selectedFile) {
                 Toast.makeText(MainActivity.this, "" + selectedFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
@@ -64,8 +62,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void reset(View view) {
         fileSelectorView.setTextSize(30);//设置文字大小
-        fileSelectorView.setTextColor(Color.GREEN); //设置文字颜色
+
         fileSelectorView.setIconSize(200); //设置图标大小也就是设置放置图标的imageView的大小
+
+        fileSelectorView.setTextColor(Color.RED); //设置文字颜色
     }
 
     public void upOrder(View view) {
