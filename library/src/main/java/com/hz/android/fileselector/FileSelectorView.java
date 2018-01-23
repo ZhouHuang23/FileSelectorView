@@ -1,12 +1,6 @@
 package com.hz.android.fileselector;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.util.AttributeSet;
@@ -24,9 +18,7 @@ import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 自定义文件选择ListView
@@ -72,7 +64,6 @@ public class FileSelectorView extends ListView {
         //设置数据适配器
         fileAdapter = new FileAdapter();
         this.setAdapter(fileAdapter);
-
 
         fileIconCreator = new DefaultFileIconCreator(getContext()); // 初始值，把默认的图标获取器作为当前使用的获取器
         defaultComparator = new FolderFirstComparator();
@@ -435,7 +426,7 @@ public class FileSelectorView extends ListView {
 
             if (o1.getFile().isDirectory()) {
                 if (o2.getFile().isDirectory()) {
-                    return o1.getFile().getName().compareTo(o2.getFile().getName());
+                    return o1.getFile().getName().compareTo(o2.getFile().getName());//内部排序
                 } else {
                     return -1;
                 }
@@ -445,7 +436,7 @@ public class FileSelectorView extends ListView {
                 if (o2.getFile().isDirectory()) {
                     return 1;
                 } else {
-                    return o1.getFile().getName().compareTo(o2.getFile().getName());
+                    return o1.getFile().getName().compareTo(o2.getFile().getName());//内部排序
                 }
             }
             return 0;
